@@ -20,7 +20,7 @@ fn read_file_lines(filename: &String) -> Result<Vec<String>, io::Error> {
     // Be sure to delete the #[allow(unused)] line above
 }
 
-#[allow(unused)] // TODO: delete this line when you implement this function
+//#[allow(unused)] // TODO: delete this line when you implement this function
 fn lcs(seq1: &Vec<String>, seq2: &Vec<String>) -> Grid {
     // Note: Feel free to use unwrap() in this code, as long as you're basically certain it'll
     // never happen. Conceptually, unwrap() is justified here, because there's not really any error
@@ -52,9 +52,22 @@ fn lcs(seq1: &Vec<String>, seq2: &Vec<String>) -> Grid {
     // Be sure to delete the #[allow(unused)] line above
 }
 
-#[allow(unused)] // TODO: delete this line when you implement this function
+//#[allow(unused)] // TODO: delete this line when you implement this function
 fn print_diff(lcs_table: &Grid, lines1: &Vec<String>, lines2: &Vec<String>, i: usize, j: usize) {
-    unimplemented!();
+    if i>0 && j>0 && lines1[i-1]==lines2[j-1]{
+        print_diff(lcs_table, lines1, lines2, i-1, j-1);
+        println!("  {}",lines1[i-1]);
+    }
+    else if j>0 && (i==0 || lcs_table.get(i, j-1).unwrap()>=lcs_table.get(i-1, j).unwrap()){
+        print_diff(lcs_table, lines1, lines2, i, j-1);
+        println!("> {}",lines2[j-1]);
+    }else if i>0 && (j==0 || lcs_table.get(i,j-1).unwrap()<lcs_table.get(i-1, j).unwrap()){
+        print_diff(lcs_table, lines1, lines2, i-1, j);
+        println!("< {}",lines1[i-1]);
+    }else{
+        println!("");
+    }
+    //unimplemented!();
     // Be sure to delete the #[allow(unused)] line above
 }
 
@@ -68,7 +81,13 @@ fn main() {
     let filename1 = &args[1];
     let filename2 = &args[2];
 
-    unimplemented!();
+    let seq1 = read_file_lines(filename1).expect("Invalid file name");
+    let seq2 = read_file_lines(filename2).expect("Invalid file name");
+    let mut lcs_table = lcs(&seq1, &seq2);
+    let i = seq1.len();
+    let j = seq2.len();
+    print_diff(&lcs_table, &seq1, &seq2, i, j);
+    //unimplemented!();
     // Be sure to delete the #[allow(unused)] line above
 }
 
