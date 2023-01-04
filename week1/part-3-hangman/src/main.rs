@@ -34,7 +34,64 @@ fn main() {
     // secret_word by doing secret_word_chars[i].
     let secret_word_chars: Vec<char> = secret_word.chars().collect();
     // Uncomment for debugging:
-    // println!("random word: {}", secret_word);
+    println!("random word: {}", secret_word);
 
     // Your code here! :)
+    let mut guess_letters:Vec<char> = Vec::new();
+    let mut guess_word = String::from("");
+    let length = secret_word_chars.len();
+    for i in 1..=length{
+        guess_letters.push('-');
+    }
+    println!("Welcom to CS110L Hangman!");
+    let mut counter = 0;
+    loop{
+        if counter>=NUM_INCORRECT_GUESSES{
+            println!("Sorry, you ran out of guesses!");
+            break;
+        }else{
+            let mut ok = 0;
+            for i in 0..length{
+                if guess_letters[i] == '-'{
+                    ok = 1;
+                    break;
+                }
+            }
+            if ok==0{
+                println!("Congratulations you guessed the secret word: {}",secret_word);
+                break;
+            }
+            print!("The Word so far is ");
+            for i in guess_letters.iter(){
+                print!("{}",i);
+            }
+            print!("\n");
+            println!("You have guessed the following letters: {}",guess_word);   
+            
+            println!("You have {} guesses left",NUM_INCORRECT_GUESSES-counter);
+            print!("Please guess a letter: ");
+            io::stdout()
+                .flush()
+                .expect("Error flushing stdout.");
+            let mut guess = String::new();
+            io::stdin()
+                .read_line(&mut guess)
+                .expect("Error reading line.");
+            
+            guess_word += guess.trim();
+            let mut flag = 0;
+            for i in 0..length{
+                if secret_word_chars[i].to_string()==guess.trim(){
+                    flag = 1;
+                    guess_letters[i] = guess.chars().next().unwrap();
+                }
+            }
+            if flag==0{
+                counter +=1;
+                println!("Sorry, that letter is not in the word");
+            }
+            println!("");
+            println!("");
+        }
+    }
 }
