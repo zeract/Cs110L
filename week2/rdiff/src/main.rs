@@ -3,7 +3,7 @@ use std::env;
 use std::fs::File; // For read_file_lines()
 use std::io::{self, BufRead}; // For read_file_lines()
 use std::process;
-
+use std::cmp;
 pub mod grid;
 
 /// Reads the file at the supplied path, and returns a vector of strings.
@@ -27,7 +27,28 @@ fn lcs(seq1: &Vec<String>, seq2: &Vec<String>) -> Grid {
     // condition you're watching out for (i.e. as long as your code is written correctly, nothing
     // external can go wrong that we would want to handle in higher-level functions). The unwrap()
     // calls act like having asserts in C code, i.e. as guards against programming error.
-    unimplemented!();
+    let m = seq1.len();
+    let n = seq2.len();
+    let mut grid = Grid::new(m+1,n+1);
+    
+    for i in 0..m+1{
+        grid.set(i, 0, 0);
+    }
+    for i in 0..n+1{
+        grid.set(0, i, 0);
+    }
+
+    for i in 0..m{
+        for j in 0..n{
+            if seq1[i] == seq2[j]{
+                grid.set(i+1,j+1,grid.get(i, j).unwrap()+1);
+            }else{
+                grid.set(i+1,j+1,cmp::max(grid.get(i+1,j).unwrap(),grid.get(i, j+1).unwrap()));
+            }
+        }
+    }
+    grid
+    //unimplemented!();
     // Be sure to delete the #[allow(unused)] line above
 }
 
