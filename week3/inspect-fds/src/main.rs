@@ -10,11 +10,17 @@ fn main() {
         println!("Usage: {} <name or pid of target>", args[0]);
         std::process::exit(1);
     }
-    #[allow(unused)] // TODO: delete this line for Milestone 1
+    // TODO: delete this line for Milestone 1
     let target = &args[1];
-
+    
     // TODO: Milestone 1: Get the target Process using psutils::get_target()
-    unimplemented!();
+    let result = ps_utils::get_target(target).expect("Wrong process name");
+    match result{
+        Some(pid)=> println!(" Found pid {}",pid.pid),
+        None=> {println!("Target \"{}\" did not match any running PIDs or executables",target);
+                std::process::exit(1);},
+    }
+    //unimplemented!();
 }
 
 #[cfg(test)]
@@ -30,6 +36,7 @@ mod test {
     #[test]
     fn test_exit_status_valid_target() {
         let mut subprocess = start_c_program("./multi_pipe_test");
+        
         assert_eq!(
             Command::new("./target/debug/inspect-fds")
                 .args(&[&subprocess.id().to_string()])
