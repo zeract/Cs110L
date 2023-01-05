@@ -16,7 +16,7 @@ fn main() {
     // TODO: Milestone 1: Get the target Process using psutils::get_target()
     let result = ps_utils::get_target(target).expect("Wrong process name");
     match result{
-        Some(pid)=> println!(" Found pid {}",pid.pid),
+        Some(pid)=> pid.print(),
         None=> {println!("Target \"{}\" did not match any running PIDs or executables",target);
                 std::process::exit(1);},
     }
