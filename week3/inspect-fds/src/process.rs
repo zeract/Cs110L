@@ -16,6 +16,7 @@ impl Process {
     }
     pub fn print(&self){
         println!("========== \"{}\" (pid {}, ppid {}) ==========",self.command,self.pid,self.ppid);
+        
     }
     /// This function returns a list of file descriptor numbers for this Process, if that
     /// information is available (it will return None if the information is unavailable). The
