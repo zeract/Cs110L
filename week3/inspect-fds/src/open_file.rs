@@ -144,7 +144,7 @@ impl OpenFile {
         let path1 = format!("/proc/{}/fdinfo/{}",pid,fd);
         let info = fs::read_to_string(path1).ok()?;
         let cursor = Self::parse_cursor(info.as_str())?;
-        let mode = Self::parse_access_mode(info.as_str())?;
+        let mode = Self::parse_access_mode(info.as_str())?  ;
         let result = OpenFile::new(path_name,cursor,mode);
         Some(result)
         //unimplemented!();

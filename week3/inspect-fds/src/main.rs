@@ -16,7 +16,12 @@ fn main() {
     // TODO: Milestone 1: Get the target Process using psutils::get_target()
     let result = ps_utils::get_target(target).expect("Wrong process name");
     match result{
-        Some(pid)=> pid.print(),
+        Some(pid)=> {pid.print();
+            let child = ps_utils::get_child_processes(pid.pid).expect("Get child process wrong");
+            for process in child{
+                process.print();
+            }
+        },
         None=> {println!("Target \"{}\" did not match any running PIDs or executables",target);
                 std::process::exit(1);},
     }
