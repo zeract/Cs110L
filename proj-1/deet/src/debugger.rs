@@ -2,7 +2,7 @@ use crate::debugger_command::DebuggerCommand;
 use crate::inferior::Inferior;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
-
+use crate::inferior::Status;
 pub struct Debugger {
     target: String,
     history_path: String,
@@ -36,6 +36,14 @@ impl Debugger {
                         // Create the inferior
                         self.inferior = Some(inferior);
                         // TODO (milestone 1): make the inferior run
+                        let status =  self.inferior.as_mut().unwrap().inferior_continue().ok().unwrap();
+                        match status{
+                            Status::Stopped(signal,pointer) => println!("Child stopped by signal {}",signal),
+                            Status::Exited(exit_code) => println!("Child exited (status {})",exit_code),
+                            Status::Signaled(signal) => println!("Child killed by signal {}",signal),
+                            other => panic!("continue return wrong!"),
+                        }
+                        
                         // You may use self.inferior.as_mut().unwrap() to get a mutable reference
                         // to the Inferior object
                     } else {
