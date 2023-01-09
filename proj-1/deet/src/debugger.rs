@@ -56,7 +56,11 @@ impl Debugger {
                         // TODO (milestone 1): make the inferior run
                         let status =  self.inferior.as_mut().unwrap().inferior_continue().ok().unwrap();
                         match status{
-                            Status::Stopped(signal,pointer) => println!("Child stopped by signal {}",signal),
+                            Status::Stopped(signal,pointer) => 
+                            {   println!("Child stopped by signal {}",signal);
+                                let file = self.debug_data.get_line_from_addr(pointer).unwrap();
+                                println!("Stopped at {}:{}",file.file,file.number);
+                            },
                             Status::Exited(exit_code) => println!("Child exited (status {})",exit_code),
                             Status::Signaled(signal) => println!("Child killed by signal {}",signal),
                             other => panic!("continue return wrong!"),
