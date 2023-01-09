@@ -32,6 +32,9 @@ impl Debugger {
         loop {
             match self.get_next_command() {
                 DebuggerCommand::Run(args) => {
+                    if self.inferior.is_some(){
+                        self.inferior.as_mut().unwrap().kill();
+                    }
                     if let Some(inferior) = Inferior::new(&self.target, &args) {
                         // Create the inferior
                         self.inferior = Some(inferior);
@@ -51,7 +54,22 @@ impl Debugger {
                     }
                 }
                 DebuggerCommand::Quit => {
+                    self.inferior.as_mut().unwrap().kill();
                     return;
+                }
+                DebuggerCommand::Continue =>{
+                    if self.inferior.is_none(){
+                        panic!("The process is not run");
+                    }
+                    let status =  self.inferior.as_mut().unwrap().inferior_continue().ok().unwrap();
+                    /*     
+                    match status{
+                            Status::Stopped(signal,pointer) => println!("Child stopped by signal {}",signal),
+                            Status::Exited(exit_code) => println!("Child exited (status {})",exit_code),
+                            Status::Signaled(signal) => println!("Child killed by signal {}",signal),
+                            other => panic!("continue return wrong!"),
+                    }
+                    */
                 }
             }
         }

@@ -75,5 +75,10 @@ impl Inferior {
         self.wait(None)
 
     }
-
+    pub fn kill(&mut self){
+        let pid = self.pid();
+        self.child.kill().expect("kill command wasn't running");
+        waitpid(pid,None);
+        println!("Killing running inferior (pid {})",self.pid());
+    }
 }
