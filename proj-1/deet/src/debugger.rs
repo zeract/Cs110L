@@ -1,20 +1,34 @@
+use core::panic;
+
 use crate::debugger_command::DebuggerCommand;
 use crate::inferior::Inferior;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use crate::inferior::Status;
+use crate::dwarf_data::{DwarfData, Error as DwarfError};
 pub struct Debugger {
     target: String,
     history_path: String,
     readline: Editor<()>,
     inferior: Option<Inferior>,
+    debug_data:DwarfData,
 }
 
 impl Debugger {
     /// Initializes the debugger.
     pub fn new(target: &str) -> Debugger {
         // TODO (milestone 3): initialize the DwarfData
-
+        let debug_data = match DwarfData::from_file(target) {
+            Ok(val) => val,
+            Err(DwarfError::ErrorOpeningFile) => {
+                println!("Could not open file {}", target);
+                std::process::exit(1);
+            }
+            Err(DwarfError::DwarfFormatError(err)) => {
+                println!("Could not debugging symbols from {}: {:?}", target, err);
+                std::process::exit(1);
+            }
+        };
         let history_path = format!("{}/.deet_history", std::env::var("HOME").unwrap());
         let mut readline = Editor::<()>::new();
         // Attempt to load history from ~/.deet_history if it exists
@@ -25,6 +39,7 @@ impl Debugger {
             history_path,
             readline,
             inferior: None,
+            debug_data:debug_data,
         }
     }
 
@@ -62,14 +77,14 @@ impl Debugger {
                         panic!("The process is not run");
                     }
                     let status =  self.inferior.as_mut().unwrap().inferior_continue().ok().unwrap();
-                    /*     
-                    match status{
-                            Status::Stopped(signal,pointer) => println!("Child stopped by signal {}",signal),
-                            Status::Exited(exit_code) => println!("Child exited (status {})",exit_code),
-                            Status::Signaled(signal) => println!("Child killed by signal {}",signal),
-                            other => panic!("continue return wrong!"),
+                    
+                }
+                DebuggerCommand::Backtrace =>{
+                    if self.inferior.is_some(){              
+                        self.inferior.as_ref().unwrap().print_backtrace(&self.debug_data);
+                    }else{
+                        panic!("doesn't have a running process");
                     }
-                    */
                 }
             }
         }
