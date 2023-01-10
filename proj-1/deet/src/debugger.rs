@@ -12,6 +12,7 @@ pub struct Debugger {
     readline: Editor<()>,
     inferior: Option<Inferior>,
     debug_data:DwarfData,
+    breakpoint:Vec<usize>,
 }
 
 impl Debugger {
@@ -31,6 +32,7 @@ impl Debugger {
         };
         let history_path = format!("{}/.deet_history", std::env::var("HOME").unwrap());
         let mut readline = Editor::<()>::new();
+        debug_data.print();
         // Attempt to load history from ~/.deet_history if it exists
         let _ = readline.load_history(&history_path);
 
@@ -40,6 +42,7 @@ impl Debugger {
             readline,
             inferior: None,
             debug_data:debug_data,
+            breakpoint:Vec::new(),
         }
     }
 
@@ -50,7 +53,7 @@ impl Debugger {
                     if self.inferior.is_some(){
                         self.inferior.as_mut().unwrap().kill();
                     }
-                    if let Some(inferior) = Inferior::new(&self.target, &args) {
+                    if let Some(inferior) = Inferior::new(&self.target, &args,&self.breakpoint) {
                         // Create the inferior
                         self.inferior = Some(inferior);
                         // TODO (milestone 1): make the inferior run
@@ -89,6 +92,13 @@ impl Debugger {
                     }else{
                         panic!("doesn't have a running process");
                     }
+                }
+                DebuggerCommand::Break(arg) =>{
+
+                    let point = &arg[1..];
+                    let mut address = Self::parse_address(point);
+                    println!("Set breakpoint {} at {:#x}",self.breakpoint.len(),address.unwrap());
+                    self.breakpoint.push(address.unwrap());
                 }
             }
         }
@@ -133,5 +143,14 @@ impl Debugger {
                 }
             }
         }
+    }
+
+    fn parse_address(addr: &str) -> Option<usize> {
+        let addr_without_0x = if addr.to_lowercase().starts_with("0x") {
+            &addr[2..]
+        } else {
+            &addr
+        };
+        usize::from_str_radix(addr_without_0x, 16).ok()
     }
 }
