@@ -1,5 +1,5 @@
 use core::panic;
-
+use nix::sys::ptrace;
 use crate::debugger_command::DebuggerCommand;
 use crate::inferior::Inferior;
 use rustyline::error::ReadlineError;
@@ -14,7 +14,11 @@ pub struct Debugger {
     debug_data:DwarfData,
     breakpoint:Vec<usize>,
 }
-
+#[derive(Clone)]
+pub struct Breakpoint {
+    pub addr: usize,
+    pub orig_byte: u8,
+}
 impl Debugger {
     /// Initializes the debugger.
     pub fn new(target: &str) -> Debugger {
@@ -64,8 +68,10 @@ impl Debugger {
                                 let file = self.debug_data.get_line_from_addr(pointer).unwrap();
                                 println!("Stopped at {}:{}",file.file,file.number);
                             },
-                            Status::Exited(exit_code) => println!("Child exited (status {})",exit_code),
-                            Status::Signaled(signal) => println!("Child killed by signal {}",signal),
+                            Status::Exited(exit_code) => {println!("Child exited (status {})",exit_code);
+                                                        self.inferior = None;},
+                            Status::Signaled(signal) => {println!("Child killed by signal {}",signal);
+                                                        self.inferior = None;},
                             other => panic!("continue return wrong!"),
                         }
                         
@@ -80,11 +86,29 @@ impl Debugger {
                     return;
                 }
                 DebuggerCommand::Continue =>{
+                    
                     if self.inferior.is_none(){
                         panic!("The process is not run");
                     }
                     let status =  self.inferior.as_mut().unwrap().inferior_continue().ok().unwrap();
-                    
+                    match status{
+                        Status::Exited(exit_code) => {
+                            println!("Child exited (status {})", exit_code);
+                            self.inferior = None;
+                        }
+                        Status::Signaled(signal) => {
+                            println!("Child exited due to signal {}", signal);
+                            self.inferior = None;
+                        }
+                        Status::Stopped(signal, rip) => {
+                            println!("Child stopped (signal {})", signal);
+                            let _line = self.debug_data.get_line_from_addr(rip);
+                            let _func = self.debug_data.get_function_from_addr(rip);
+                            if _line.is_some() && _func.is_some() {
+                                println!("Stopped at {} ({})", _func.unwrap(), _line.unwrap());
+                            }
+                        }
+                    }
                 }
                 DebuggerCommand::Backtrace =>{
                     if self.inferior.is_some(){              
@@ -99,6 +123,13 @@ impl Debugger {
                     let mut address = Self::parse_address(point);
                     println!("Set breakpoint {} at {:#x}",self.breakpoint.len(),address.unwrap());
                     self.breakpoint.push(address.unwrap());
+                    if self.inferior.is_some(){
+                        match self.inferior.as_mut().unwrap().write_byte(address.unwrap(), 0xcc){
+                            Ok(orig_byte) => { self.inferior.as_mut().unwrap().breakpoint.insert(address.unwrap(), Breakpoint { addr: address.unwrap(), orig_byte: orig_byte });}
+                            Err(_) => println!("Invalid breakpoint address {:#x}",address.unwrap()),
+                        }
+                        
+                    }
                 }
             }
         }

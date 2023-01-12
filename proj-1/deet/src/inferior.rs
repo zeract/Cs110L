@@ -6,7 +6,8 @@ use std::process::Child;
 use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::mem::size_of;
-
+use std::collections::HashMap;
+use crate::debugger::Breakpoint;
 use crate::dwarf_data::DwarfData;
 
 pub enum Status {
@@ -35,6 +36,7 @@ fn align_addr_to_word(addr: usize) -> usize {
 }
 pub struct Inferior {
     child: Child,
+    pub breakpoint: HashMap<usize,Breakpoint>,
 }
 
 impl Inferior {
@@ -52,10 +54,15 @@ impl Inferior {
         //    "Inferior::new not implemented! target={}, args={:?}",
         //    target, args
         //);
-        let mut inferior = Inferior{child:child};
+        
+        let mut inferior = Inferior{child:child ,breakpoint:HashMap::new()};
         let result =  inferior.wait(None).ok()?;
         for address in breakpoint.iter(){
-            inferior.write_byte( *address, 0xcc);
+            match inferior.write_byte(*address, 0xcc){
+                Ok(orig_byte) => {inferior.breakpoint.insert(*address, Breakpoint { addr: *address, orig_byte: orig_byte });}
+                Err(_) => println!("Invalid breakpoint address {:#x}",address),
+            }
+            
         }
         Some(inferior)
     }
@@ -79,10 +86,30 @@ impl Inferior {
         })
     }
 
-    pub fn inferior_continue(&self) -> Result<Status,nix::Error>{
-        ptrace::cont(self.pid(), None);
-        self.wait(None)
+    pub fn inferior_continue(&mut self) -> Result<Status,nix::Error>{
+        let mut regs = ptrace::getregs(self.pid())?;
+        let rip = regs.rip as usize;
+        if self.breakpoint.contains_key(&(rip-1)){
+            //okknni println!("stopped at a breakpoint");
+            let orig = self.breakpoint.get(&(rip-1)).unwrap().orig_byte;
+            self.write_byte(rip-1, orig)?;
 
+            regs.rip = (rip-1)  as u64;
+            ptrace::setregs(self.pid(), regs).unwrap();
+
+            ptrace::step(self.pid(), None).unwrap();
+            
+            match self.wait(None).unwrap(){
+                Status::Exited(exit_code) => return Ok(Status::Exited(exit_code)), 
+                Status::Signaled(signal) => return Ok(Status::Signaled(signal)),
+                Status::Stopped(_, _) => {
+                    // restore 0xcc in the breakpoint location
+                    self.write_byte(rip - 1, 0xcc).unwrap();
+                }
+            }
+        }
+        ptrace::cont(self.pid(), None)?;
+        self.wait(None)
     }
     pub fn kill(&mut self){
         let pid = self.pid();
@@ -109,7 +136,7 @@ impl Inferior {
         Ok(())
     }
 
-    fn write_byte(&mut self, addr: usize, val: u8) -> Result<u8, nix::Error> {
+    pub fn write_byte(&mut self, addr: usize, val: u8) -> Result<u8, nix::Error> {
         let aligned_addr = align_addr_to_word(addr);
         let byte_offset = addr - aligned_addr;
         let word = ptrace::read(self.pid(), aligned_addr as ptrace::AddressType)? as u64;
