@@ -118,18 +118,52 @@ impl Debugger {
                     }
                 }
                 DebuggerCommand::Break(arg) =>{
-
-                    let point = &arg[1..];
-                    let mut address = Self::parse_address(point);
-                    println!("Set breakpoint {} at {:#x}",self.breakpoint.len(),address.unwrap());
-                    self.breakpoint.push(address.unwrap());
-                    if self.inferior.is_some(){
-                        match self.inferior.as_mut().unwrap().write_byte(address.unwrap(), 0xcc){
-                            Ok(orig_byte) => { self.inferior.as_mut().unwrap().breakpoint.insert(address.unwrap(), Breakpoint { addr: address.unwrap(), orig_byte: orig_byte });}
-                            Err(_) => println!("Invalid breakpoint address {:#x}",address.unwrap()),
+                    if arg.starts_with('*'){
+                        let point = &arg[1..];
+                        let mut address = Self::parse_address(point);
+                        println!("Set breakpoint {} at {:#x}",self.breakpoint.len(),address.unwrap());
+                        self.breakpoint.push(address.unwrap());
+                        if self.inferior.is_some(){
+                            match self.inferior.as_mut().unwrap().write_byte(address.unwrap(), 0xcc){
+                                Ok(orig_byte) => { self.inferior.as_mut().unwrap().breakpoint.insert(address.unwrap(), Breakpoint { addr: address.unwrap(), orig_byte: orig_byte });}
+                                Err(_) => println!("Invalid breakpoint address {:#x}",address.unwrap()),
+                            }
+                            
+                        }
+                    }else{
+                        
+                        let line = Self::parse_address(arg.as_str());
+                        match line{
+                            Some(number) => {
+                                
+                                let address = self.debug_data.get_addr_for_line(None, arg.parse::<usize>().ok().unwrap());
+                                println!("Set breakpoint {} at {:#x}",self.breakpoint.len(),address.unwrap());
+                                self.breakpoint.push(address.unwrap());
+                                if self.inferior.is_some(){
+                                    match self.inferior.as_mut().unwrap().write_byte(address.unwrap(), 0xcc){
+                                        Ok(orig_byte) => { self.inferior.as_mut().unwrap().breakpoint.insert(address.unwrap(), Breakpoint { addr: address.unwrap(), orig_byte: orig_byte });}
+                                        Err(_) => println!("Invalid breakpoint address {:#x}",address.unwrap()),
+                                    }
+                                    
+                                }
+                            },
+                            None => {
+                                let address = self.debug_data.get_addr_for_function(None, &arg);
+                                println!("Set breakpoint {} at {:#x}",self.breakpoint.len(),address.unwrap());
+                                self.breakpoint.push(address.unwrap());
+                                if self.inferior.is_some(){
+                                    match self.inferior.as_mut().unwrap().write_byte(address.unwrap(), 0xcc){
+                                        Ok(orig_byte) => { self.inferior.as_mut().unwrap().breakpoint.insert(address.unwrap(), Breakpoint { addr: address.unwrap(), orig_byte: orig_byte });}
+                                        Err(_) => println!("Invalid breakpoint address {:#x}",address.unwrap()),
+                                    }
+                                    
+                                }
+                            },
                         }
                         
+                        
                     }
+                    
                 }
             }
         }
